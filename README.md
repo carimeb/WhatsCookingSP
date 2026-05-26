@@ -257,11 +257,6 @@ pip install requests
 python3 coletar_restaurantes.py
 ```
 
-**Corrigir bairros via geocodificação reversa:**
-```bash
-pip install pymongo
-python3 corrigir_bairros.py   # ~30 min para 1490 restaurantes
-```
 
 ---
 
