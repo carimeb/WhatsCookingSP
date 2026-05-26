@@ -3,3 +3,4 @@ node_modules/
 .DS_Store
 data/venv/
 data/restaurants_sp_enriched.json
+data/corrigir_bairros.py
