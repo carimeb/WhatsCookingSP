@@ -1,0 +1,257 @@
+[
+  {
+    "mappingType": "explicit",
+    "input": [
+      "massa"
+    ],
+    "synonyms": [
+      "macarrão",
+      "spaghetti",
+      "espaguete",
+      "fettuccine",
+      "penne",
+      "tagliatelle",
+      "linguine",
+      "rigatoni",
+      "lasanha",
+      "gnocchi",
+      "ravioli",
+      "tortellini",
+      "capellini",
+      "fusilli",
+      "farfalle"
+    ]
+  },
+  {
+    "mappingType": "explicit",
+    "input": [
+      "noodles"
+    ],
+    "synonyms": [
+      "macarrão",
+      "ramen",
+      "udon",
+      "soba",
+      "yakisoba",
+      "lamem",
+      "lamen",
+      "lámen",
+      "spaghetti",
+      "espaguete"
+    ]
+  },
+  {
+    "mappingType": "explicit",
+    "input": [
+      "frango"
+    ],
+    "synonyms": [
+      "galinha",
+      "ave",
+      "chicken",
+      "peito de frango",
+      "coxa de frango",
+      "sobrecoxa",
+      "frango grelhado",
+      "frango assado"
+    ]
+  },
+  {
+    "mappingType": "explicit",
+    "input": [
+      "carne"
+    ],
+    "synonyms": [
+      "bife",
+      "picanha",
+      "filé",
+      "alcatra",
+      "fraldinha",
+      "maminha",
+      "costela",
+      "contrafilé",
+      "beef",
+      "steak"
+    ]
+  },
+  {
+    "mappingType": "explicit",
+    "input": [
+      "peixe"
+    ],
+    "synonyms": [
+      "salmão",
+      "atum",
+      "tilápia",
+      "bacalhau",
+      "saint peter",
+      "robalo",
+      "tainha",
+      "pescada",
+      "linguado",
+      "fish"
+    ]
+  },
+  {
+    "mappingType": "explicit",
+    "input": [
+      "doce"
+    ],
+    "synonyms": [
+      "sobremesa",
+      "dessert",
+      "brigadeiro",
+      "pudim",
+      "mousse",
+      "sorvete",
+      "torta",
+      "bolo",
+      "tiramisu",
+      "crème brûlée"
+    ]
+  },
+  {
+    "mappingType": "explicit",
+    "input": [
+      "vegetariano"
+    ],
+    "synonyms": [
+      "vegano",
+      "vegan",
+      "sem carne",
+      "plant based",
+      "plant-based",
+      "sem glúten",
+      "orgânico",
+      "natural",
+      "saudável"
+    ]
+  },
+  {
+    "mappingType": "explicit",
+    "input": [
+      "lanche"
+    ],
+    "synonyms": [
+      "hambúrguer",
+      "burger",
+      "sanduíche",
+      "sandwich",
+      "wrap",
+      "hot dog",
+      "cachorro quente",
+      "tapioca",
+      "pastel"
+    ]
+  },
+  {
+    "mappingType": "explicit",
+    "input": [
+      "frutos do mar"
+    ],
+    "synonyms": [
+      "camarão",
+      "peixe",
+      "lula",
+      "polvo",
+      "siri",
+      "lagosta",
+      "vieira",
+      "ostra",
+      "marisco",
+      "seafood"
+    ]
+  },
+  {
+    "mappingType": "explicit",
+    "input": [
+      "churrasco"
+    ],
+    "synonyms": [
+      "bbq",
+      "barbecue",
+      "grelhado",
+      "assado",
+      "espeto",
+      "picanha",
+      "costela",
+      "churrasqueira",
+      "brasa"
+    ]
+  },
+  {
+    "mappingType": "equivalent",
+    "synonyms": [
+      "hambúrguer",
+      "hamburger",
+      "burger",
+      "burguer",
+      "hamburguer"
+    ]
+  },
+  {
+    "mappingType": "equivalent",
+    "synonyms": [
+      "pizza",
+      "pizzza",
+      "piza"
+    ]
+  },
+  {
+    "mappingType": "equivalent",
+    "synonyms": [
+      "sushi",
+      "sashimi",
+      "temaki",
+      "japonês",
+      "japanese"
+    ]
+  },
+  {
+    "mappingType": "equivalent",
+    "synonyms": [
+      "café",
+      "coffee",
+      "espresso",
+      "cafezinho"
+    ]
+  },
+  {
+    "mappingType": "equivalent",
+    "synonyms": [
+      "shawarma",
+      "gyros",
+      "kebab",
+      "churrasco árabe"
+    ]
+  },
+  {
+    "mappingType": "equivalent",
+    "synonyms": [
+      "pão",
+      "bread",
+      "baguette",
+      "ciabatta",
+      "focaccia"
+    ]
+  },
+  {
+    "mappingType": "equivalent",
+    "synonyms": [
+      "sobremesa",
+      "dessert",
+      "sweet",
+      "doce"
+    ]
+  },
+  {
+    "mappingType": "equivalent",
+    "synonyms": [
+      "ramen",
+      "lámen",
+      "lamen",
+      "lamem",
+      "ramem"
+    ]
+  }
+]

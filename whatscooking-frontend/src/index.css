@@ -1,0 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --mongodb-green: #00ED64;
+  --mongodb-dark-green: #00684A;
+  --header-bg: #1C2D3F;
+  --sidebar-bg: #ffffff;
+  --body-bg: #f5f6f7;
+  --card-bg: #ffffff;
+  --code-bg: #1C2D3F;
+  --code-text: #ffffff;
+  --code-key: #C3E88D;
+  --code-string: #F78C6C;
+  --code-number: #FF5370;
+  --code-comment: #546E7A;
+  --score-bg: #00684A;
+  --score-text: #ffffff;
+  --border: #e8e8e8;
+  --text: #1C2D3F;
+  --text-muted: #5C6C75;
+  --radius: 8px;
+  --sponsored-bg: #FFD700;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--body-bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
+/* Leaflet */
+.leaflet-container { font-family: 'Inter', sans-serif; }
+
+/* Code panel syntax highlighting */
+.code-key    { color: var(--code-key); }
+.code-string { color: var(--code-string); }
+.code-number { color: var(--code-number); }
+.code-comment { color: var(--code-comment); font-style: italic; }
+
+/* Highlight marks */
+mark {
+  background: #FFD700;
+  color: #1C2D3F;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/* Star rating */
+.stars { color: #FFD700; letter-spacing: 1px; }
+.stars .empty { color: #ccc; }
+
+/* Tabs */
+.tab-active {
+  border-bottom: 3px solid var(--mongodb-green) !important;
+  color: var(--mongodb-green) !important;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeIn 0.2s ease; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  width: 20px; height: 20px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+/* Force sidebar tooltips above Leaflet map */
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-pane,
+.leaflet-overlay-pane,
+.leaflet-shadow-pane,
+.leaflet-marker-pane,
+.leaflet-tooltip-pane,
+.leaflet-popup-pane { z-index: 100 !important; }
+
+.leaflet-map-pane { z-index: 100 !important; }
+.leaflet-top, .leaflet-bottom { z-index: 150 !important; }
+
+.sidebar-tooltip {
+  position: absolute;
+  z-index: 9999 !important;
+}
