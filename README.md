@@ -60,7 +60,6 @@ WhatsCookingSP/
 │
 └── data/                           # Scripts e dados
     ├── coletar_restaurantes.py     # Coleta restaurantes reais via OSM
-    ├── corrigir_bairros.py         # Corrige bairros via geocodificação reversa
     ├── menu_synonyms.json          # Coleção de sinônimos
     └── restaurants_sp_enriched.json # Dataset de restaurantes (gerado)
 ```
