@@ -180,13 +180,21 @@ export function DataIndexesPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 24 }}>
         {[
           {
-            title: 'Default Index Definition',
+            title: 'Índice 1 (criar com o nome `default`):',
             code: `{
   "mappings": {
     "dynamic": false,
     "fields": {
-      "name": { "type": "string",
-        "analyzer": "lucene.standard" },
+      "name": {
+        "type": "string",
+        "analyzer": "lucene.portuguese",
+        "multi": {
+          "standard": {
+            "type": "string",
+            "analyzer": "lucene.standard"
+          }
+        }
+      },
       "cuisine": [
         { "type": "string",
           "analyzer": "lucene.portuguese" },
@@ -218,7 +226,7 @@ export function DataIndexesPage() {
 }`,
           },
           {
-            title: 'Autocomplete Index Definition',
+            title: 'Índice 2 (criar com o nome `autocomplete`):',
             code: `{
   "mappings": {
     "dynamic": false,
@@ -241,7 +249,7 @@ export function DataIndexesPage() {
 }`,
           },
           {
-            title: 'Facet Index Definition',
+            title: 'Índice 3 (criar com o nome `facets`):',
             code: `{
   "mappings": {
     "dynamic": false,

@@ -142,30 +142,48 @@ export default function Header({ onSearch, onReset, activeTab, setActiveTab, hea
                 style={inputStyle}
               />
 
-              {showSuggestions && suggestions.length > 0 && (
+              {showSuggestions && q.trim().length >= 2 && (
                 <div style={{
                   position: 'absolute', top: '100%', left: 0, right: 0,
                   background: '#fff', borderRadius: 8, zIndex: 9999,
                   boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
                   overflow: 'hidden', marginTop: 4,
                 }}>
-                  {suggestions.map((s, i) => (
+                  {suggestions.length > 0 ? (
+                    suggestions.map((s, i) => (
+                      <div
+                        key={i}
+                        onMouseDown={e => { e.preventDefault(); handleSelect(s); }}
+                        style={{
+                          padding: '10px 16px', cursor: 'pointer',
+                          borderBottom: i < suggestions.length - 1 ? '1px solid #f0f0f0' : 'none',
+                          fontSize: 14,
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f5f9f6'}
+                        onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                      >
+                        <div style={{ fontWeight: 600 }}>{s.name}</div>
+                        <div style={{ fontSize: 12, color: '#5C6C75' }}>{s.cuisine} · {s.borough}</div>
+                      </div>
+                    ))
+                  ) : (
                     <div
-                      key={i}
-                      onMouseDown={e => { e.preventDefault(); handleSelect(s); }}
+                      onMouseDown={e => { e.preventDefault(); handleFind(); }}
                       style={{
-                        padding: '10px 16px', cursor: 'pointer',
-                        borderBottom: i < suggestions.length - 1 ? '1px solid #f0f0f0' : 'none',
-                        fontSize: 14,
+                        padding: '12px 16px', cursor: 'pointer',
+                        fontSize: 14, color: '#5C6C75',
+                        display: 'flex', alignItems: 'center', gap: 8,
                       }}
                       onMouseEnter={e => e.currentTarget.style.background = '#f5f9f6'}
                       onMouseLeave={e => e.currentTarget.style.background = '#fff'}
                     >
-                      <div style={{ fontWeight: 600 }}>{s.name}</div>
-                      <div style={{ fontSize: 12, color: '#5C6C75' }}>{s.cuisine} · {s.borough}</div>
+                      <span style={{ fontSize: 16 }}>🔍</span>
+                      <span>
+                        Sem sugestões para <strong style={{ color: '#1A1A2E' }}>"{q}"</strong>. Pressione <strong>Enter</strong> ou clique em <strong>Find</strong> para tentar a busca completa.
+                      </span>
                     </div>
-                  ))}
-                  {acQuery && (
+                  )}
+                  {acQuery && suggestions.length > 0 && (
                     <div
                       onMouseDown={handleShowCode}
                       style={{

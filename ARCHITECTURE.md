@@ -104,9 +104,32 @@ O frontend React não pode conectar diretamente ao MongoDB Atlas por segurança 
 | `autocomplete` | Sugestões em tempo real | Requer tipo `autocomplete` com `edgeGram` — incompatível com `string` no mesmo índice |
 | `facets` | Contagens dinâmicas dos filtros | Requer tipos `stringFacet` e `numberFacet` — usa `$searchMeta` em vez de `$search` |
 
-### Por que `lucene.standard` no campo `menu` e `name`?
+### Por que `name` é multi-field (portuguese + standard)?
 
-O `lucene.portuguese` faz stemming agressivo — remove sufixos para encontrar a raiz da palavra. Isso é ótimo para `description` e `borough`, mas quebra palavras estrangeiras como "sushi", "ramen", "burger". Com `lucene.standard`, o fuzzy match funciona corretamente para nomes próprios e pratos de outras culinárias.
+O `lucene.portuguese` faz stemming agressivo — remove sufixos para encontrar a raiz da palavra. Isso é ótimo para palavras portuguesas (`description`, `borough`), mas quebra:
+- **Palavras estrangeiras** como "sushi", "ramen", "burger" — o stemmer português não sabe lidar com elas
+- **Buscas fuzzy em palavras portuguesas** — o fuzzy compara o termo digitado contra a versão *stemada* no índice. Por exemplo, "choperia" pode ser stemada para "chop", então buscar "choparia" (que stema para outra coisa) não casa.
+
+A solução foi indexar o campo `name` **duas vezes**:
+
+```json
+"name": {
+  "type": "string",
+  "analyzer": "lucene.portuguese",
+  "multi": {
+    "standard": {
+      "type": "string",
+      "analyzer": "lucene.standard"
+    }
+  }
+}
+```
+
+No backend, a busca por nome usa `compound.should` com os dois caminhos (`name` e `name.standard`), garantindo que palavras portuguesas (via stemming) e estrangeiras (via standard) sejam encontradas.
+
+### Por que `lucene.standard` no campo `menu`?
+
+Mesma motivação acima: o menu contém muitos pratos estrangeiros ("ramen", "burger", "fettuccine"). `lucene.standard` evita o stemming agressivo e mantém fuzzy match preciso para esses termos.
 
 ### Por que `token` em `cuisine` e `borough`?
 
@@ -153,17 +176,25 @@ Locations → MapView.js (pins no mapa)
 
 ## 🔍 Implementação dos operadores principais
 
-### Busca por nome (fuzzy)
+### Busca por nome (fuzzy com multi-field)
 
 ```js
 {
-  text: {
-    query: q,
-    path: ['name', 'borough'],
-    fuzzy: { maxEdits: 2, maxExpansions: 50 }
+  compound: {
+    should: [
+      // versão com stemming português (matches semânticos: "pizzaria"→"pizza")
+      { text: { query: q, path: 'name', fuzzy: { maxEdits: 2, maxExpansions: 50 } } },
+      // versão sem stemming (fuzzy preciso: "choparia"→"choperia", "suxi"→"sushi")
+      { text: { query: q, path: 'name.standard', fuzzy: { maxEdits: 2, maxExpansions: 50 } } },
+      // busca também em borough com tolerância menor
+      { text: { query: q, path: 'borough', fuzzy: { maxEdits: 1 } } }
+    ],
+    minimumShouldMatch: 1
   }
 }
 ```
+
+A busca em `name.standard` é o que permite fuzzy funcionar para palavras como "choparia" (sem o standard, o stemmer português transforma "choperia" indexada em um token irreconhecível pelo fuzzy).
 
 ### Busca por comida (synonyms + fuzzy)
 
@@ -178,6 +209,27 @@ Locations → MapView.js (pins no mapa)
   }
 }
 ```
+
+### Autocomplete (com fuzzy)
+
+```js
+{
+  $search: {
+    index: 'autocomplete',
+    compound: {
+      should: [
+        { autocomplete: { query: q, path: 'name', fuzzy: { maxEdits: 1, prefixLength: 1 }, score: { boost: { value: 3 } } } },
+        { autocomplete: { query: q, path: 'cuisine', fuzzy: { maxEdits: 1, prefixLength: 1 } } },
+        { autocomplete: { query: q, path: 'borough', fuzzy: { maxEdits: 1, prefixLength: 1 } } }
+      ]
+    }
+  }
+}
+```
+
+O `fuzzy: { maxEdits: 1 }` no autocomplete permite que erros simples de digitação ("choparia" → "Choperia") apareçam nas sugestões. O `prefixLength: 1` garante que a primeira letra precisa bater exata, evitando ruído.
+
+> ⚠️ **Limitação do Atlas:** `maxEdits` no autocomplete é máximo 1 (diferente da busca normal que aceita 2). Para erros maiores, o frontend mostra uma mensagem de fallback no dropdown vazio incentivando o usuário a usar "Find" e cair na busca completa (que aceita `maxEdits: 2`).
 
 ### Filtro por bairro (match exato)
 
@@ -273,12 +325,6 @@ Os dados foram coletados e enriquecidos em duas etapas:
 - Campo `reviews`: aleatório entre 10 e 5000
 - Campo `price_range`: 1 a 4 ($ a $$$$)
 
-**3. Correção de bairros (opcional)**
-- Script: `data/corrigir_bairros.py` (não incluído no repo — contém credenciais)
-- Usa Nominatim (OSM) para geocodificação reversa
-- Taxa: 1 requisição/segundo (política de uso do Nominatim)
-- Tempo estimado: ~30 minutos para 1490 restaurantes
-
 ---
 
 ## 🧩 Componentes do frontend
@@ -302,6 +348,7 @@ Os dados foram coletados e enriquecidos em duas etapas:
 - **Painel de código em tempo real** — mostra a query `$search` exata enquanto o usuário filtra, tornando tangível o que o Atlas Search executa
 - **Score badge** — cada card mostra o score de relevância, demonstrando como o ranking funciona
 - **Emoji temático** — emoji flutuante aparece baseado no termo buscado (🍔 para burger, 🍜 para ramen)
-- **Highlight no menu** — ao clicar em "Show Menu", os pratos que correspondem à busca são destacados em amarelo, incluindo sinônimos
+- **Highlight no menu** — ao clicar em "Show Menu", os pratos que correspondem à busca são destacados em amarelo. O destaque usa os `highlights[]` retornados pelo próprio Atlas Search, então funciona consistentemente com buscas fuzzy (`"arros"` destaca `"arroz"`) e sinônimos (`"noodles"` destaca `"ramen"`)
+- **Mensagem de fallback no autocomplete** — quando o autocomplete não retorna sugestões (ex: erro de digitação além do limite de 1 edição), o dropdown mostra uma mensagem clicável incentivando o usuário a executar a busca completa via "Find"
 - **Tooltip nos botões geo** — explica o que `near` e `geoWithin` fazem antes do usuário interagir
 - **Reset pelo logo** — clicar no ícone do prato limpa todos os filtros e centraliza o mapa na Praça da Sé

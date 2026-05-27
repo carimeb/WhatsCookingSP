@@ -1,34 +1,19 @@
-# 🍽️ WhatsCooking SP
+# 🍔 WhatsCooking SP
 
-Demo interativa do **MongoDB Atlas Search** usando restaurantes reais de São Paulo. Inspirada na demo original [WhatsCooking](https://github.com/mongodb-developer/WhatsCooking) da MongoDB, adaptada para SP e modernizada com backend Node.js/Express.
+Demo de busca de restaurantes em São Paulo usando **MongoDB Atlas Search** como engine de full-text search — uma alternativa moderna ao Elastic, totalmente integrada ao MongoDB.
 
-Desenvolvida como material de apresentação para demonstrar as capacidades do Atlas Search para clientes que usam Elasticsearch.
-
----
-
-## 📸 O que a demo mostra
-
-- **Busca textual com fuzzy match** — tolera erros de digitação ("piza" → "pizza")
-- **Autocomplete** — sugestões em tempo real enquanto digita
-- **Sinônimos** — "massa" encontra "spaghetti", "macarrão", "fettuccine" etc.
-- **Highlight** — destaca o termo buscado nos resultados e no menu do restaurante
-- **Facets** — filtros dinâmicos por culinária e bairro com contagens
-- **Geospatial** — busca por proximidade (`near`) ou dentro de um raio (`geoWithin`)
-- **Compound operator** — combina múltiplos operadores em uma única query
-- **Function Score** — boost em resultados patrocinados
-- **Painel de código** — exibe a query `$search` em tempo real enquanto o usuário interage
-- **Abas educativas** — Synonyms, Function Score e Data & Indexes explicam cada feature
+Inspirada na [demo original do mongodb-developer](https://github.com/mongodb-developer/WhatsCooking), reconstruída com dados reais de São Paulo e uma stack atualizada.
 
 ---
 
-## 🏗️ Arquitetura
+## ✨ Funcionalidades
 
-```
-Browser (React)  →  Node.js/Express API  →  MongoDB Atlas (cloud)
-  porta 3000           porta 5000
-```
-
-Tudo roda localmente exceto o banco, que fica no Atlas.
+- **Full-text search** com fuzzy matching, autocomplete e highlights
+- **Sinônimos** explícitos e equivalentes (massa → macarrão, sushi ↔ sashimi…)
+- **Function score** para boost de resultados patrocinados
+- **Busca geoespacial** com `near` e `geoWithin`
+- **Facets** para filtros por culinária, bairro e nota
+- **Mapa interativo** com marcadores dos restaurantes (Leaflet)
 
 ---
 
@@ -53,23 +38,26 @@ WhatsCookingSP/
 │
 ├── whatscooking-backend/           # Node.js + Express API
 │   ├── server.js                   # Entry point + rotas
-│   ├── .env                        # Credenciais (não commitar!)
+│   ├── .env.example                # Template de variáveis de ambiente
+│   ├── .env                        # Credenciais reais (não commitar!)
 │   └── src/
 │       ├── db.js                   # Conexão MongoDB
 │       └── routes.js               # Todos os endpoints de busca
 │
 └── data/                           # Scripts e dados
-    ├── coletar_restaurantes.py     # Coleta restaurantes reais via OSM
-    ├── menu_synonyms.json          # Coleção de sinônimos
-    └── restaurants_sp_enriched.json # Dataset de restaurantes (gerado)
+    ├── coletar_restaurantes.py     # Gera o dataset via OpenStreetMap
+    ├── menu_synonyms.json          # Coleção de sinônimos (versionada)
+    └── restaurants_sp_enriched.json # Dataset gerado (NÃO versionado)
 ```
+
+> 💡 **Sobre o `restaurants_sp_enriched.json`:** esse arquivo não está no repositório porque é gerado dinamicamente pelo script `coletar_restaurantes.py`, que busca os dados em tempo real no OpenStreetMap. Você vai gerá-lo no passo 2 abaixo.
 
 ---
 
 ## ⚙️ Pré-requisitos
 
 - **Node.js** v18+
-- **Python** 3.9+ (apenas para scripts de dados)
+- **Python** 3.9+ (para gerar o dataset)
 - **MongoDB Atlas** — cluster M10+ com MongoDB 8.0
 - **mongoimport** (MongoDB Database Tools)
 
@@ -80,23 +68,35 @@ WhatsCookingSP/
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/<seu-usuario>/whatscooking-sp.git
-cd whatscooking-sp
+git clone https://github.com/carimeb/WhatsCookingSP.git
+cd WhatsCookingSP
 ```
 
-### 2. Configure o Atlas
+### 2. Gere o dataset de restaurantes
 
-No seu cluster Atlas, crie o banco `whatscooking` e importe os dados:
+O dataset é coletado em tempo real do OpenStreetMap (Overpass API):
 
 ```bash
-# Restaurantes
+cd data
+pip3 install requests
+python3 coletar_restaurantes.py
+```
+
+O script leva ~1 minuto e gera o arquivo `restaurants_sp_enriched.json` com cerca de 1490 restaurantes reais de São Paulo (nome, endereço, coordenadas) enriquecidos com dados mockados (menu, stars, reviews, price_range).
+
+### 3. Importe os dados no Atlas
+
+No seu cluster Atlas, crie o banco `whatscooking` e importe as duas coleções:
+
+```bash
+# Restaurantes (gerado no passo anterior)
 mongoimport \
   --uri "mongodb+srv://<user>:<senha>@<cluster>.mongodb.net/whatscooking" \
   --collection restaurants \
   --file data/restaurants_sp_enriched.json \
   --jsonArray --drop
 
-# Sinônimos
+# Sinônimos (já vem no repo)
 mongoimport \
   --uri "mongodb+srv://<user>:<senha>@<cluster>.mongodb.net/whatscooking" \
   --collection menu_synonyms \
@@ -104,100 +104,30 @@ mongoimport \
   --jsonArray --drop
 ```
 
-### 3. Crie os índices de Search
+### 4. Crie os índices de busca no Atlas
 
-No Atlas UI: **seu cluster → Search Indexes → Create Search Index → JSON Editor**
+No Atlas UI → Search Indexes → na coleção `restaurants`, crie **3 índices** com os nomes e definições JSON abaixo (as definições completas também estão na aba "Data & Indexes" do app rodando):
 
-**Índice `default`:**
-```json
-{
-  "mappings": {
-    "dynamic": false,
-    "fields": {
-      "name": { "type": "string", "analyzer": "lucene.standard" },
-      "cuisine": [
-        { "type": "string", "analyzer": "lucene.portuguese" },
-        { "type": "token" }
-      ],
-      "borough": [
-        { "type": "string", "analyzer": "lucene.portuguese" },
-        { "type": "token" }
-      ],
-      "description": { "type": "string", "analyzer": "lucene.portuguese" },
-      "menu": { "type": "string", "analyzer": "lucene.standard" },
-      "stars": { "type": "number" },
-      "reviews": { "type": "number" },
-      "price_range": { "type": "number" },
-      "open_now": { "type": "boolean" },
-      "location": { "type": "geo" }
-    }
-  },
-  "synonyms": [{
-    "analyzer": "lucene.standard",
-    "name": "MenuSynonyms",
-    "source": { "collection": "menu_synonyms" }
-  }]
-}
-```
+- **Índice 1 (criar com o nome `default`):** busca principal com sinônimos no campo `menu` e multi-analyzer em `name` (português + standard)
+- **Índice 2 (criar com o nome `autocomplete`):** sugestões em tempo real (edgeGram) nos campos `name`, `cuisine`, `borough`
+- **Índice 3 (criar com o nome `facets`):** contagens para os filtros laterais (stringFacet em cuisine/borough, numberFacet em stars/price_range)
 
-**Índice `autocomplete`:**
-```json
-{
-  "mappings": {
-    "dynamic": false,
-    "fields": {
-      "name": [{ "type": "autocomplete", "tokenization": "edgeGram", "minGrams": 2, "maxGrams": 10, "foldDiacritics": true }],
-      "cuisine": [{ "type": "autocomplete", "tokenization": "edgeGram", "minGrams": 2, "maxGrams": 10, "foldDiacritics": true }],
-      "borough": [{ "type": "autocomplete", "tokenization": "edgeGram", "minGrams": 2, "maxGrams": 10, "foldDiacritics": true }]
-    }
-  }
-}
-```
+> ⚠️ Os nomes dos índices precisam ser **exatamente** `default`, `autocomplete` e `facets` — o backend faz referência a eles por nome.
 
-**Índice `facets`:**
-```json
-{
-  "mappings": {
-    "dynamic": false,
-    "fields": {
-      "name": { "type": "string", "analyzer": "lucene.portuguese" },
-      "cuisine": [
-        { "type": "string", "analyzer": "lucene.standard" },
-        { "type": "stringFacet" }
-      ],
-      "borough": [
-        { "type": "string", "analyzer": "lucene.standard" },
-        { "type": "stringFacet" }
-      ],
-      "menu": { "type": "string", "analyzer": "lucene.standard" },
-      "stars": [{ "type": "number" }, { "type": "numberFacet" }],
-      "price_range": [{ "type": "number" }, { "type": "numberFacet" }],
-      "open_now": { "type": "boolean" },
-      "location": { "type": "geo" }
-    }
-  },
-  "synonyms": [{
-    "analyzer": "lucene.standard",
-    "name": "MenuSynonyms",
-    "source": { "collection": "menu_synonyms" }
-  }]
-}
-```
-
-Aguarde os 3 índices ficarem com status **Active**.
-
-### 4. Backend
+### 5. Backend
 
 ```bash
 cd whatscooking-backend
 npm install
-cp .env.example .env   # edite com suas credenciais
+cp .env.example .env   # depois edite com suas credenciais do Atlas
 npm run dev
 ```
 
 O backend sobe em `http://localhost:5000`.
 
-### 5. Frontend
+### 6. Frontend
+
+Em outro terminal:
 
 ```bash
 cd whatscooking-frontend
@@ -236,38 +166,24 @@ Abre automaticamente em `http://localhost:3000`.
 
 ---
 
-## 📦 Dataset
+## 📦 Sobre o dataset
 
-- **1490 restaurantes reais** de São Paulo coletados via OpenStreetMap (Overpass API)
+- **~1490 restaurantes reais** de São Paulo coletados via OpenStreetMap (Overpass API)
 - Dados reais: nome, endereço, coordenadas, tipo de culinária
-- Dados enriquecidos: menu (mockado por culinária), stars, reviews, price_range
+- Dados enriquecidos (mockados): menu por culinária, stars, reviews, price_range
 - **15 culinárias**: Brasileira, Italiana, Japonesa, Pizza, Americana, Churrasco, Árabe, Francesa, Vegana, Contemporânea, Frutos do Mar, Mexicana, Padaria, Café, Peruana
 - **30 bairros** de SP
-
----
-
-## 🔄 Scripts de dados
-
-**Recriar o dataset do zero:**
-```bash
-cd data
-python3 -m venv venv
-source venv/bin/activate
-pip install requests
-python3 coletar_restaurantes.py
-```
-
 
 ---
 
 ## 🗺️ Sinônimos configurados
 
 **Explicit** (unidirecional):
-- `massa` → macarrão, spaghetti, fettuccine, penne, lasanha...
-- `noodles` → ramen, udon, soba, yakisoba, lamen...
-- `frango` → chicken, galinha, peito de frango...
-- `churrasco` → bbq, barbecue, grelhado, picanha...
-- `frutos do mar` → camarão, peixe, lula, polvo, lagosta...
+- `massa` → macarrão, spaghetti, fettuccine, penne, lasanha…
+- `noodles` → ramen, udon, soba, yakisoba, lamen…
+- `frango` → chicken, galinha, peito de frango…
+- `churrasco` → bbq, barbecue, grelhado, picanha…
+- `frutos do mar` → camarão, peixe, lula, polvo, lagosta…
 
 **Equivalent** (bidirecional):
 - hambúrguer ↔ burger ↔ hamburger

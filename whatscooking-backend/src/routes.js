@@ -25,13 +25,36 @@ async function searchRestaurants(req, res) {
     const filterClauses = [];
     const shouldClauses = [];
 
-    // Restaurant name search (fuzzy)
+    // Restaurant name search — multi-field (portuguese + standard) para fuzzy robusto
     if (q.trim()) {
       mustClauses.push({
-        text: {
-          query: q,
-          path: ['name', 'borough'],
-          fuzzy: { maxEdits: 2, maxExpansions: 50 },
+        compound: {
+          should: [
+            {
+              text: {
+                query: q,
+                path: 'name',
+                fuzzy: { maxEdits: 2, maxExpansions: 50 },
+                score: { boost: { value: 2 } },
+              },
+            },
+            {
+              text: {
+                query: q,
+                path: 'name.standard',
+                fuzzy: { maxEdits: 2, maxExpansions: 50 },
+                score: { boost: { value: 2 } },
+              },
+            },
+            {
+              text: {
+                query: q,
+                path: 'borough',
+                fuzzy: { maxEdits: 1 },
+              },
+            },
+          ],
+          minimumShouldMatch: 1,
         },
       });
     }
@@ -187,11 +210,11 @@ async function autocomplete(req, res) {
         $search: {
           index: 'autocomplete',
           compound: {
-            should: [
-              { autocomplete: { query: q, path: 'name', score: { boost: { value: 3 } } } },
-              { autocomplete: { query: q, path: 'cuisine' } },
-              { autocomplete: { query: q, path: 'borough' } },
-            ],
+           should: [
+            { autocomplete: { query: q, path: 'name', fuzzy: { maxEdits: 1, prefixLength: 1 }, score: { boost: { value: 3 } } } },
+            { autocomplete: { query: q, path: 'cuisine', fuzzy: { maxEdits: 1, prefixLength: 1 } } },
+            { autocomplete: { query: q, path: 'borough', fuzzy: { maxEdits: 1, prefixLength: 1 } } },
+           ],
           },
         },
       },

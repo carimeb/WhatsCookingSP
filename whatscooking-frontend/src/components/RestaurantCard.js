@@ -81,48 +81,63 @@ function highlightItem(item, terms) {
 }
 
 function MenuModal({ restaurant, food, onClose }) {
-  const terms = getHighlightTerms(food);
+  // Constrói um Set com os textos do menu que o Atlas marcou como match
+  // (cobre fuzzy: "arros"→"arroz" e sinônimos: "noodles"→"ramen")
+  const menuHits = new Set();
+  (restaurant.highlights || [])
+    .filter(h => h.path === 'menu')
+    .forEach(h => {
+      const text = (h.texts || [])
+        .filter(t => t.type === 'hit')
+        .map(t => t.value.toLowerCase())
+        .join(' ');
+      if (text) menuHits.add(text.trim());
+    });
+
+  // Fallback client-side: caso o highlight do Atlas não retorne, usa .includes literal
+  const lowerFood = (food || '').toLowerCase().trim();
+
+  function isHit(item) {
+    const lowerItem = item.toLowerCase();
+    // 1. Match via highlights do Atlas (cobre fuzzy + sinônimos)
+    for (const hit of menuHits) {
+      if (lowerItem.includes(hit)) return true;
+    }
+    // 2. Fallback: match literal
+    if (lowerFood && lowerItem.includes(lowerFood)) return true;
+    return false;
+  }
 
   return (
     <div onClick={onClose} style={{
       position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-      zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+      zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
     }}>
       <div onClick={e => e.stopPropagation()} style={{
         background: '#fff', borderRadius: 12, maxWidth: 600, width: '100%',
         padding: 32, boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-        display: 'flex', gap: 32, position: 'relative',
+        display: 'flex', gap: 32,
       }}>
-        {/* Close button */}
-        <button onClick={onClose} style={{
-          position: 'absolute', top: 12, right: 12,
-          background: '#ff5370', border: 'none', borderRadius: '50%',
-          width: 28, height: 28, color: '#fff', cursor: 'pointer',
-          fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontWeight: 700,
-        }}>✕</button>
-
         {/* Illustration */}
-        <div style={{ fontSize: 80, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+        <div style={{ fontSize: 80, display: 'flex', alignItems: 'center' }}>
           {CUISINE_EMOJI[restaurant.cuisine] || '🍴'}
         </div>
-
         {/* Menu items */}
         <div style={{ flex: 1 }}>
           <h2 style={{ marginBottom: 16, fontSize: 20 }}>{restaurant.name} Menu</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {(restaurant.menu || []).map((item, i) => (
               <div key={i} style={{ fontSize: 14 }}>
-                {highlightItem(item, terms)}
+                {isHit(item) ? <mark>{item}</mark> : item}
               </div>
             ))}
           </div>
-          {food && (
-            <div style={{ marginTop: 12, fontSize: 11, color: '#999' }}>
-              Destacando: "{food}" e sinônimos
-            </div>
-          )}
         </div>
+        <button onClick={onClose} style={{
+          position: 'absolute', top: 12, right: 12,
+          background: 'none', border: 'none', fontSize: 20,
+          cursor: 'pointer', color: '#999',
+        }}>✕</button>
       </div>
     </div>
   );
