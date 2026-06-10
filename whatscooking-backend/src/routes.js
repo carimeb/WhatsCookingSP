@@ -6,6 +6,68 @@ function parseNumber(val, fallback) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Cláusulas compartilhadas entre /api/restaurants e /api/facets.
+// Fonte única: garante que as contagens dos facets sempre batam com os
+// resultados da busca (mesmos paths, mesmo fuzzy, mesmos sinônimos).
+// ─────────────────────────────────────────────────────────────────────────────
+function buildNameClause(q) {
+  return {
+    compound: {
+      should: [
+        {
+          text: {
+            query: q,
+            path: 'name',
+            fuzzy: { maxEdits: 2, maxExpansions: 50 },
+            score: { boost: { value: 2 } },
+          },
+        },
+        {
+          text: {
+            query: q,
+            path: 'name.standard',
+            fuzzy: { maxEdits: 2, maxExpansions: 50 },
+            score: { boost: { value: 2 } },
+          },
+        },
+        {
+          text: {
+            query: q,
+            path: 'borough',
+            fuzzy: { maxEdits: 1 },
+          },
+        },
+      ],
+      minimumShouldMatch: 1,
+    },
+  };
+}
+
+function buildFoodClause(food) {
+  return {
+    compound: {
+      should: [
+        {
+          text: {
+            query: food,
+            path: 'menu',
+            synonyms: 'MenuSynonyms',
+          },
+        },
+        {
+          text: {
+            query: food,
+            path: 'menu',
+            fuzzy: { maxEdits: 1, maxExpansions: 50 },
+          },
+        },
+      ],
+      minimumShouldMatch: 1,
+    },
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GET /api/restaurants
 // ─────────────────────────────────────────────────────────────────────────────
 async function searchRestaurants(req, res) {
@@ -27,61 +89,12 @@ async function searchRestaurants(req, res) {
 
     // Restaurant name search — multi-field (portuguese + standard) para fuzzy robusto
     if (q.trim()) {
-      mustClauses.push({
-        compound: {
-          should: [
-            {
-              text: {
-                query: q,
-                path: 'name',
-                fuzzy: { maxEdits: 2, maxExpansions: 50 },
-                score: { boost: { value: 2 } },
-              },
-            },
-            {
-              text: {
-                query: q,
-                path: 'name.standard',
-                fuzzy: { maxEdits: 2, maxExpansions: 50 },
-                score: { boost: { value: 2 } },
-              },
-            },
-            {
-              text: {
-                query: q,
-                path: 'borough',
-                fuzzy: { maxEdits: 1 },
-              },
-            },
-          ],
-          minimumShouldMatch: 1,
-        },
-      });
+      mustClauses.push(buildNameClause(q));
     }
 
     // Food/menu search: compound with should — synonyms OR fuzzy (cannot mix both)
     if (food.trim()) {
-      mustClauses.push({
-        compound: {
-          should: [
-            {
-              text: {
-                query: food,
-                path: 'menu',
-                synonyms: 'MenuSynonyms',
-              },
-            },
-            {
-              text: {
-                query: food,
-                path: 'menu',
-                fuzzy: { maxEdits: 1, maxExpansions: 50 },
-              },
-            },
-          ],
-          minimumShouldMatch: 1,
-        },
-      });
+      mustClauses.push(buildFoodClause(food));
     }
 
     // Cuisine filter — uses equals with token type for exact matching
@@ -136,6 +149,9 @@ async function searchRestaurants(req, res) {
     const $searchStage = {
       $search: {
         index: 'default',
+        // Conta o total DENTRO do proprio $search (exposto via $$SEARCH_META),
+        // eliminando a necessidade de uma segunda aggregation só para contar
+        count: { type: 'total' },
         ...(highlight === 'true' && { highlight: { path: ['name', 'cuisine', 'menu', 'borough'] } }),
         ...(compound ? { compound } : { exists: { path: 'name' } }),
       },
@@ -149,6 +165,7 @@ async function searchRestaurants(req, res) {
           address: 1, location: 1, stars: 1, reviews: 1, sponsored: 1,
           price_range: 1, open_now: 1, phone: 1, website: 1, menu: 1,
           score: { $meta: 'searchScore' },
+          total: '$$SEARCH_META.count.total',
           ...(highlight === 'true' && { highlights: { $meta: 'searchHighlights' } }),
         },
       },
@@ -156,13 +173,12 @@ async function searchRestaurants(req, res) {
       { $limit: parseInt(limit) },
     ];
 
-    const countPipeline = [$searchStage, { $count: 'total' }];
-    const [results, countResult] = await Promise.all([
-      collection.aggregate(pipeline).toArray(),
-      collection.aggregate(countPipeline).toArray(),
-    ]);
+    const results = await collection.aggregate(pipeline).toArray();
 
-    const total = countResult[0]?.total ?? 0;
+    // O total vem do $$SEARCH_META projetado em cada documento (uma única
+    // aggregation). Removemos o campo dos documentos antes de responder.
+    const total = results[0]?.total ?? 0;
+    results.forEach(r => delete r.total);
 
     // O painel de código exibe EXATAMENTE o stage executado — fonte única,
     // impossível divergir da query real.
@@ -221,23 +237,17 @@ async function facets(req, res) {
     const collection = await getCollection();
     // Note: borough is intentionally excluded from facets query
     // so borough options remain visible after selection
-    const { q = '', food = '', lat, lng, distance, min_stars } = req.query;
+    const { q = '', food = '', lat, lng, distance, min_stars, geo_mode = 'geoWithin' } = req.query;
 
     const mustClauses = [];
     const filterClauses = [];
 
-    if (q.trim()) mustClauses.push({ text: { query: q, path: 'name', fuzzy: { maxEdits: 2 } } });
-    if (food.trim()) mustClauses.push({
-      compound: {
-        should: [
-          { text: { query: food, path: 'menu', synonyms: 'MenuSynonyms' } },
-          { text: { query: food, path: 'menu', fuzzy: { maxEdits: 1, maxExpansions: 50 } } },
-        ],
-        minimumShouldMatch: 1,
-      },
-    });
+    if (q.trim()) mustClauses.push(buildNameClause(q));
+    if (food.trim()) mustClauses.push(buildFoodClause(food));
     if (min_stars) filterClauses.push({ range: { path: 'stars', gte: parseNumber(min_stars, 0) } });
-    if (lat && lng && distance) {
+    // No modo "near" a busca principal não restringe por geo (near apenas pontua),
+    // então os facets também não devem filtrar, ou as contagens divergiriam.
+    if (lat && lng && distance && geo_mode !== 'near') {
       const radiusMeters = parseNumber(distance, 1) * 1609.34;
       mustClauses.push({
         geoWithin: {

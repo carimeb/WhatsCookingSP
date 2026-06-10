@@ -255,22 +255,40 @@ export function DataIndexesPage() {
   "mappings": {
     "dynamic": false,
     "fields": {
+      "name": {
+        "type": "string",
+        "analyzer": "lucene.portuguese",
+        "multi": {
+          "standard": {
+            "type": "string",
+            "analyzer": "lucene.standard"
+          }
+        }
+      },
       "cuisine": [
-        { "type": "stringFacet" },
-        { "type": "string" }
+        { "type": "token" },
+        { "type": "string",
+          "analyzer": "lucene.portuguese" }
       ],
       "borough": [
-        { "type": "stringFacet" },
-        { "type": "string" }
+        { "type": "token" },
+        { "type": "string",
+          "analyzer": "lucene.portuguese" }
       ],
-      "stars": [
-        { "type": "numberFacet" },
-        { "type": "number" }
-      ],
+      "stars": { "type": "number" },
+      "price_range": { "type": "number" },
       "location": { "type": "geo" },
-      "menu": { "type": "string" }
+      "menu": { "type": "string",
+        "analyzer": "lucene.standard" }
     }
-  }
+  },
+  "synonyms": [{
+    "analyzer": "lucene.standard",
+    "name": "MenuSynonyms",
+    "source": {
+      "collection": "menu_synonyms"
+    }
+  }]
 }`,
           },
         ].map(({ title, code }) => (

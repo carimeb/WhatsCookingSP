@@ -51,6 +51,7 @@ export default function useSearch() {
           lng: f.lng || '',
           distance: f.distance || '',
           min_stars: f.min_stars || '',
+          geo_mode: f.geo_mode,
         }),
       ]);
 

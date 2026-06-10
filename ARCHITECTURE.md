@@ -106,7 +106,7 @@ O frontend React não pode conectar diretamente ao MongoDB Atlas por segurança:
 |---|---|---|
 | `default` | Busca principal, geo, range, synonyms | Índice geral com todos os campos |
 | `autocomplete` | Sugestões em tempo real | Requer tipo `autocomplete` com `edgeGram`, incompatível com `string` no mesmo índice |
-| `facets` | Contagens dinâmicas dos filtros | Requer tipos `stringFacet` e `numberFacet`, usa `$searchMeta` em vez de `$search` |
+| `facets` | Contagens dinâmicas dos filtros | Usa tipos `token` e `number` para facetar (os antigos `stringFacet`/`numberFacet` foram deprecados), consultado via `$searchMeta` |
 
 ### Por que `name` é multi-field (portuguese + standard)?
 
@@ -148,6 +148,16 @@ O operador de function score com `path` lê o valor numérico diretamente do ín
 ```
 
 Sem esse mapeamento, o boost falha silenciosamente: a query executa, mas todos os documentos caem no fallback `undefined: 1` e nada muda no ranking.
+
+### Por que o índice `facets` espelha os mapeamentos do `default`?
+
+O backend usa as mesmas cláusulas de busca (`buildNameClause`, `buildFoodClause`) tanto em `/api/restaurants` (índice `default`) quanto em `/api/facets` (índice `facets`). Cláusulas idênticas executadas contra mapeamentos diferentes produzem matches diferentes: numa versão anterior, o índice `facets` não tinha o multi-field `name.standard`, e buscas fuzzy como "pizaria" retornavam 73 resultados com contagem de 71 nos facets (os 2 documentos que só casavam via `name.standard` escapavam da contagem).
+
+A regra geral: **índices que compartilham cláusulas precisam compartilhar mapeamentos**. Por isso o `facets` replica do `default` o multi-field em `name`, os analyzers de `cuisine`/`borough` e o bloco `synonyms` (sinônimos são configurados por índice).
+
+### Nota sobre a depreciação de `stringFacet` e `numberFacet`
+
+O Atlas deprecou os tipos dedicados de facet. Os tipos normais absorveram a função: `token` agora serve para facetar, ordenar e fazer match exato (`equals`, `in`, `range`), e `number` serve para facetar e para `range`. A sintaxe da query no `$searchMeta` não muda (o facet continua declarando `type: 'string'` ou `type: 'number'`); apenas o tipo do campo na definição do índice. As definições completas dos 3 índices estão na aba "Data & Indexes" do app.
 
 ### Por que `fuzzy` e `synonyms` não podem coexistir?
 

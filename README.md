@@ -113,7 +113,7 @@ No Atlas UI → Search Indexes → na coleção `restaurants`, crie **3 índices
 
 - **Índice 1 (criar com o nome `default`):** busca principal com sinônimos no campo `menu`, multi-analyzer em `name` (português + standard) e `sponsored_boost` como `number` (necessário para o function score)
 - **Índice 2 (criar com o nome `autocomplete`):** sugestões em tempo real (edgeGram) nos campos `name`, `cuisine`, `borough`
-- **Índice 3 (criar com o nome `facets`):** contagens para os filtros laterais (stringFacet em cuisine/borough, numberFacet em stars/price_range)
+- **Índice 3 (criar com o nome `facets`):** contagens para os filtros laterais (`token` em cuisine/borough, `number` em stars/price_range), com os mesmos mapeamentos de `name` e sinônimos do índice `default` para as contagens baterem com os resultados
 
 > ⚠️ Os nomes dos índices precisam ser **exatamente** `default`, `autocomplete` e `facets`, pois o backend faz referência a eles por nome.
 
