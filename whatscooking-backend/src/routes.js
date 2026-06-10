@@ -129,7 +129,7 @@ async function searchRestaurants(req, res) {
       ...(filterClauses.length && { filter: filterClauses }),
       ...(shouldClauses.length && { should: shouldClauses }),
       ...(sponsored === 'true' && {
-        score: { function: { multiply: [{ score: 'relevance' }, { constant: { value: 5 } }] } }
+        score: { function: { multiply: [{ score: 'relevance' }, { path: { value: 'sponsored_boost', undefined: 1 } }] } }
       }),
     } : null;
 
@@ -146,7 +146,7 @@ async function searchRestaurants(req, res) {
       {
         $project: {
           _id: 1, name: 1, cuisine: 1, borough: 1, description: 1,
-          address: 1, location: 1, stars: 1, reviews: 1,
+          address: 1, location: 1, stars: 1, reviews: 1, sponsored: 1,
           price_range: 1, open_now: 1, phone: 1, website: 1, menu: 1,
           score: { $meta: 'searchScore' },
           ...(highlight === 'true' && { highlights: { $meta: 'searchHighlights' } }),
@@ -164,36 +164,15 @@ async function searchRestaurants(req, res) {
 
     const total = countResult[0]?.total ?? 0;
 
-    // Build queryDisplay for frontend code panel
-    const queryDisplay = buildQueryDisplay({ mustClauses, filterClauses, shouldClauses, sponsored });
+    // O painel de código exibe EXATAMENTE o stage executado — fonte única,
+    // impossível divergir da query real.
+    const queryDisplay = $searchStage;
 
     res.json({ results, total, page: parseInt(page), pages: Math.ceil(total / parseInt(limit)), queryDisplay });
   } catch (err) {
     console.error('searchRestaurants error:', err);
     res.status(500).json({ error: err.message });
   }
-}
-
-function buildQueryDisplay({ mustClauses, filterClauses, shouldClauses, sponsored }) {
-  const hasFilters = mustClauses.length || filterClauses.length || shouldClauses.length;
-  if (!hasFilters) return { $search: { index: '< indexName >', exists: { path: 'name' } } };
-
-  const compound = {
-    ...(mustClauses.length && { must: mustClauses }),
-    ...(filterClauses.length && { filter: filterClauses }),
-    ...(shouldClauses.length && { should: shouldClauses }),
-    ...(sponsored === 'true' && {
-      score: { function: { multiply: [{ score: 'relevance' }, { constant: { value: 5 } }] } }
-    }),
-  };
-
-  return {
-    $search: {
-      '// optional, defaults to "default"': '',
-      'index': '< indexName >',
-      compound,
-    },
-  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -224,12 +203,8 @@ async function autocomplete(req, res) {
 
     const results = await collection.aggregate(pipeline).toArray();
 
-    const queryDisplay = {
-      $search: {
-        index: 'autocomplete',
-        autocomplete: { query: q, path: 'name', fuzzy: { maxEdits: 1 } },
-      },
-    };
+    // Exibe o stage real executado (compound com os 3 paths)
+    const queryDisplay = pipeline[0];
 
     res.json({ suggestions: results, queryDisplay });
   } catch (err) {
@@ -294,9 +269,8 @@ async function facets(req, res) {
 
     const result = await collection.aggregate(pipeline).toArray();
 
-    const queryDisplay = {
-      $searchMeta: { index: 'facetIndex', facet: { operator, facets: { cuisineFacet: { type: 'string', path: 'cuisine' }, boroughFacet: { type: 'string', path: 'borough' } } } },
-    };
+    // Exibe o stage real executado (índice "facets", todos os 4 facets)
+    const queryDisplay = pipeline[0];
 
     res.json({ ...(result[0] ?? {}), queryDisplay });
   } catch (err) {

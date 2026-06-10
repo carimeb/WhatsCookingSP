@@ -1,6 +1,6 @@
 # 🏗️ Architecture & Development Guide
 
-Este documento descreve as decisões técnicas, o fluxo de dados e os detalhes de implementação do **WhatsCooking SP** — uma demo do MongoDB Atlas Search estilo Yelp para São Paulo.
+Este documento descreve as decisões técnicas, o fluxo de dados e os detalhes de implementação do **WhatsCooking SP**, uma demo do MongoDB Atlas Search estilo Yelp para São Paulo.
 
 Ideal para reproduzir o projeto do zero usando desenvolvimento guiado por especificação (SDD).
 
@@ -8,7 +8,7 @@ Ideal para reproduzir o projeto do zero usando desenvolvimento guiado por especi
 
 ## 🎯 Contexto e objetivo
 
-A demo foi construída para apresentar o **MongoDB Atlas Search** a clientes que utilizam Elasticsearch e estão insatisfeitos com performance e custo. O objetivo é mostrar, de forma visual e interativa, que todos os operadores de busca que o cliente já usa no Elastic têm equivalente no Atlas Search — em muitos casos com configuração mais simples.
+A demo foi construída para apresentar o **MongoDB Atlas Search** a clientes que utilizam Elasticsearch e estão insatisfeitos com performance e custo. O objetivo é mostrar, de forma visual e interativa, que todos os operadores de busca que o cliente já usa no Elastic têm equivalente no Atlas Search, em muitos casos com configuração mais simples.
 
 ---
 
@@ -64,9 +64,13 @@ A demo foi construída para apresentar o **MongoDB Atlas Search** a clientes que
     "Ramen de shoyu",
     "Udon",
     "Gyoza"
-  ]
+  ],
+  "sponsored": true,
+  "sponsored_boost": 5
 }
 ```
+
+> Os campos `sponsored` e `sponsored_boost` existem apenas nos restaurantes marcados pelo script `marcar_patrocinados.js` (15 documentos). Nos demais, são ausentes.
 
 **Coleção:** `whatscooking.menu_synonyms`
 
@@ -84,7 +88,7 @@ A demo foi construída para apresentar o **MongoDB Atlas Search** a clientes que
 
 ### Por que Node.js/Express no backend?
 
-O frontend React não pode conectar diretamente ao MongoDB Atlas por segurança — a connection string ficaria exposta no navegador. O backend Node.js age como camada intermediária que:
+O frontend React não pode conectar diretamente ao MongoDB Atlas por segurança: a connection string ficaria exposta no navegador. O backend Node.js age como camada intermediária que:
 - Mantém as credenciais seguras no servidor
 - Executa os pipelines de aggregation
 - Retorna apenas os dados necessários ao frontend
@@ -101,14 +105,14 @@ O frontend React não pode conectar diretamente ao MongoDB Atlas por segurança 
 | Índice | Propósito | Motivo da separação |
 |---|---|---|
 | `default` | Busca principal, geo, range, synonyms | Índice geral com todos os campos |
-| `autocomplete` | Sugestões em tempo real | Requer tipo `autocomplete` com `edgeGram` — incompatível com `string` no mesmo índice |
-| `facets` | Contagens dinâmicas dos filtros | Requer tipos `stringFacet` e `numberFacet` — usa `$searchMeta` em vez de `$search` |
+| `autocomplete` | Sugestões em tempo real | Requer tipo `autocomplete` com `edgeGram`, incompatível com `string` no mesmo índice |
+| `facets` | Contagens dinâmicas dos filtros | Requer tipos `stringFacet` e `numberFacet`, usa `$searchMeta` em vez de `$search` |
 
 ### Por que `name` é multi-field (portuguese + standard)?
 
-O `lucene.portuguese` faz stemming agressivo — remove sufixos para encontrar a raiz da palavra. Isso é ótimo para palavras portuguesas (`description`, `borough`), mas quebra:
-- **Palavras estrangeiras** como "sushi", "ramen", "burger" — o stemmer português não sabe lidar com elas
-- **Buscas fuzzy em palavras portuguesas** — o fuzzy compara o termo digitado contra a versão *stemada* no índice. Por exemplo, "choperia" pode ser stemada para "chop", então buscar "choparia" (que stema para outra coisa) não casa.
+O `lucene.portuguese` faz stemming agressivo: remove sufixos para encontrar a raiz da palavra. Isso é ótimo para palavras portuguesas (`description`, `borough`), mas quebra:
+- **Palavras estrangeiras** como "sushi", "ramen", "burger": o stemmer português não sabe lidar com elas
+- **Buscas fuzzy em palavras portuguesas**: o fuzzy compara o termo digitado contra a versão *stemada* no índice. Por exemplo, "choperia" pode ser stemada para "chop", então buscar "choparia" (que stema para outra coisa) não casa.
 
 A solução foi indexar o campo `name` **duas vezes**:
 
@@ -133,14 +137,24 @@ Mesma motivação acima: o menu contém muitos pratos estrangeiros ("ramen", "bu
 
 ### Por que `token` em `cuisine` e `borough`?
 
-O operador `equals` do Atlas Search requer que o campo esteja indexado como `token` (match exato, case-sensitive). Sem isso, o filtro por bairro usaria `text` que faz match parcial — "Vila Mariana" faria match com "Vila Madalena" por compartilharem o token "Vila".
+O operador `equals` do Atlas Search requer que o campo esteja indexado como `token` (match exato, case-sensitive). Sem isso, o filtro por bairro usaria `text` que faz match parcial: "Vila Mariana" faria match com "Vila Madalena" por compartilharem o token "Vila".
+
+### Por que `sponsored_boost` precisa estar no índice?
+
+O operador de function score com `path` lê o valor numérico diretamente do índice Lucene, não do documento em disco. Por isso o índice `default` mapeia explicitamente:
+
+```json
+"sponsored_boost": { "type": "number" }
+```
+
+Sem esse mapeamento, o boost falha silenciosamente: a query executa, mas todos os documentos caem no fallback `undefined: 1` e nada muda no ranking.
 
 ### Por que `fuzzy` e `synonyms` não podem coexistir?
 
-É uma limitação do Atlas Search — o mesmo operador `text` não aceita os dois simultaneamente. A solução foi usar um `compound` com `should`:
-- Um `text` com `synonyms: "MenuSynonyms"` — para encontrar sinônimos
-- Um `text` com `fuzzy` — para tolerar erros de digitação
-- `minimumShouldMatch: 1` — basta um dos dois encontrar resultado
+É uma limitação do Atlas Search: o mesmo operador `text` não aceita os dois simultaneamente. A solução foi usar um `compound` com `should`:
+- Um `text` com `synonyms: "MenuSynonyms"` para encontrar sinônimos
+- Um `text` com `fuzzy` para tolerar erros de digitação
+- `minimumShouldMatch: 1`: basta um dos dois encontrar resultado
 
 ---
 
@@ -170,6 +184,12 @@ Results → RestaurantCard.js (com highlights)
 Facets → Sidebar.js (com contagens)
 QueryDisplay → CodePanel.js (query em tempo real)
 Locations → MapView.js (pins no mapa)
+```
+
+### Fonte única para o painel de código
+
+O campo `queryDisplay` retornado pelos endpoints não é uma representação reconstruída da query: é o **próprio stage executado** (`$searchStage` na busca principal, `pipeline[0]` no autocomplete e nos facets). Isso torna estruturalmente impossível o painel divergir do que o Atlas Search realmente recebeu, incluindo `index`, `highlight` e o bloco de function score. Versões anteriores montavam o display em paralelo (função `buildQueryDisplay`), o que permitia drift entre exibição e execução.
+
 ```
 
 ---
@@ -282,13 +302,23 @@ O `fuzzy: { maxEdits: 1 }` no autocomplete permite que erros simples de digitaç
       function: {
         multiply: [
           { score: 'relevance' },
-          { constant: { value: 5 } }
+          { path: { value: 'sponsored_boost', undefined: 1 } }
         ]
       }
     }
   }
 }
 ```
+
+O score de relevância (BM25) é multiplicado pelo valor do campo `sponsored_boost` do próprio documento. Documentos sem o campo caem no fallback `undefined: 1` e mantêm o score original. Isso garante duas propriedades importantes para a demo:
+
+1. **O ranking muda de verdade**: apenas os documentos patrocinados sobem. Uma versão anterior usava `constant: { value: 5 }`, que multiplicava todos os scores igualmente e, portanto, não alterava ordem nenhuma.
+2. **Relevância é preservada**: o boost é proporcional. Um patrocinado pouco relevante ainda pode perder de um orgânico muito relevante, o que protege a experiência de busca.
+
+**Requisitos para funcionar:**
+- O campo `sponsored_boost` precisa estar mapeado como `number` no índice `default`
+- Os documentos patrocinados são marcados pelo script `whatscooking-backend/scripts/marcar_patrocinados.js`, que grava `sponsored: true` (flag usada pelo frontend para exibir o badge SPONSORED) e `sponsored_boost: 5` em 15 restaurantes. O script é idempotente e determinístico (mesma amostra em qualquer clone do repo)
+- O `$project` da busca retorna o campo `sponsored`, e o frontend só exibe o badge em documentos que realmente o possuem (`sponsored={sponsored && !!r.sponsored}` no `App.js`)
 
 ### Facets com $searchMeta
 
@@ -325,6 +355,11 @@ Os dados foram coletados e enriquecidos em duas etapas:
 - Campo `reviews`: aleatório entre 10 e 5000
 - Campo `price_range`: 1 a 4 ($ a $$$$)
 
+**3. Marcação de patrocinados**
+- Script: `whatscooking-backend/scripts/marcar_patrocinados.js`
+- Grava `sponsored: true` e `sponsored_boost: 5` em 15 restaurantes
+- Idempotente (limpa marcações anteriores) e determinístico (mesma amostra em qualquer clone)
+
 ---
 
 ## 🧩 Componentes do frontend
@@ -332,7 +367,7 @@ Os dados foram coletados e enriquecidos em duas etapas:
 | Componente | Responsabilidade |
 |---|---|
 | `App.js` | Estado global, orquestração entre componentes |
-| `useSearch.js` | Hook — gerencia busca, filtros, resultados, facets |
+| `useSearch.js` | Hook que gerencia busca, filtros, resultados, facets |
 | `Header.js` | Barra de busca dupla (restaurante + comida), autocomplete, abas |
 | `Sidebar.js` | Filtros geo, estrelas, cuisine, borough com queries inline |
 | `MapView.js` | Mapa Leaflet, pins responsivos, fly-to, geo center marker |
@@ -345,10 +380,10 @@ Os dados foram coletados e enriquecidos em duas etapas:
 
 ## ⚡ Decisões de UX para a demo
 
-- **Painel de código em tempo real** — mostra a query `$search` exata enquanto o usuário filtra, tornando tangível o que o Atlas Search executa
-- **Score badge** — cada card mostra o score de relevância, demonstrando como o ranking funciona
-- **Emoji temático** — emoji flutuante aparece baseado no termo buscado (🍔 para burger, 🍜 para ramen)
-- **Highlight no menu** — ao clicar em "Show Menu", os pratos que correspondem à busca são destacados em amarelo. O destaque usa os `highlights[]` retornados pelo próprio Atlas Search, então funciona consistentemente com buscas fuzzy (`"arros"` destaca `"arroz"`) e sinônimos (`"noodles"` destaca `"ramen"`)
-- **Mensagem de fallback no autocomplete** — quando o autocomplete não retorna sugestões (ex: erro de digitação além do limite de 1 edição), o dropdown mostra uma mensagem clicável incentivando o usuário a executar a busca completa via "Find"
-- **Tooltip nos botões geo** — explica o que `near` e `geoWithin` fazem antes do usuário interagir
-- **Reset pelo logo** — clicar no ícone do prato limpa todos os filtros e centraliza o mapa na Praça da Sé
+- **Painel de código em tempo real**: exibe o stage `$search` exatamente como executado (mesma referência de objeto enviada ao driver), tornando tangível o que o Atlas Search recebe
+- **Score badge**: cada card mostra o score de relevância, demonstrando como o ranking funciona
+- **Emoji temático**: emoji flutuante aparece baseado no termo buscado (🍔 para burger, 🍜 para ramen)
+- **Highlight no menu**: ao clicar em "Show Menu", os pratos que correspondem à busca são destacados em amarelo. O destaque usa os `highlights[]` retornados pelo próprio Atlas Search, então funciona consistentemente com buscas fuzzy (`"arros"` destaca `"arroz"`) e sinônimos (`"noodles"` destaca `"ramen"`)
+- **Mensagem de fallback no autocomplete**: quando o autocomplete não retorna sugestões (ex: erro de digitação além do limite de 1 edição), o dropdown mostra uma mensagem clicável incentivando o usuário a executar a busca completa via "Find"
+- **Tooltip nos botões geo**: explica o que `near` e `geoWithin` fazem antes do usuário interagir
+- **Reset pelo logo**: clicar no ícone do prato limpa todos os filtros e centraliza o mapa na Praça da Sé

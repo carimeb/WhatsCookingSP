@@ -178,7 +178,7 @@ export default function App() {
                     food={filters.food}
                     onClick={setSelected}
                     rank={i + 1 + (page - 1) * 20}
-                    sponsored={sponsored && i < 2}
+                    sponsored={sponsored && !!r.sponsored}
                   />
                 </div>
               ))}

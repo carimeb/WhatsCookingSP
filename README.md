@@ -1,6 +1,6 @@
 # 🍔 WhatsCooking SP
 
-Demo de busca de restaurantes em São Paulo usando **MongoDB Atlas Search** como engine de full-text search — uma alternativa moderna ao Elastic, totalmente integrada ao MongoDB.
+Demo de busca de restaurantes em São Paulo usando **MongoDB Atlas Search** como engine de full-text search: uma alternativa moderna ao Elastic, totalmente integrada ao MongoDB.
 
 Inspirada na [demo original do mongodb-developer](https://github.com/mongodb-developer/WhatsCooking), reconstruída com dados reais de São Paulo e uma stack atualizada.
 
@@ -10,7 +10,8 @@ Inspirada na [demo original do mongodb-developer](https://github.com/mongodb-dev
 
 - **Full-text search** com fuzzy matching, autocomplete e highlights
 - **Sinônimos** explícitos e equivalentes (massa → macarrão, sushi ↔ sashimi…)
-- **Function score** para boost de resultados patrocinados
+- **Function score** para boost de resultados patrocinados (campo `sponsored_boost` no documento, badge SPONSORED no card)
+- **Painel de código fiel**: exibe exatamente o stage `$search` executado, sem versões simplificadas
 - **Busca geoespacial** com `near` e `geoWithin`
 - **Facets** para filtros por culinária, bairro e nota
 - **Mapa interativo** com marcadores dos restaurantes (Leaflet)
@@ -40,6 +41,8 @@ WhatsCookingSP/
 │   ├── server.js                   # Entry point + rotas
 │   ├── .env.example                # Template de variáveis de ambiente
 │   ├── .env                        # Credenciais reais (não commitar!)
+│   ├── scripts/
+│   │   └── marcar_patrocinados.js  # Marca restaurantes patrocinados (function score)
 │   └── src/
 │       ├── db.js                   # Conexão MongoDB
 │       └── routes.js               # Todos os endpoints de busca
@@ -58,7 +61,7 @@ WhatsCookingSP/
 
 - **Node.js** v18+
 - **Python** 3.9+ (para gerar o dataset)
-- **MongoDB Atlas** — cluster M10+ com MongoDB 8.0
+- **MongoDB Atlas**: cluster M10+ com MongoDB 8.0
 - **mongoimport** (MongoDB Database Tools)
 
 ---
@@ -108,11 +111,11 @@ mongoimport \
 
 No Atlas UI → Search Indexes → na coleção `restaurants`, crie **3 índices** com os nomes e definições JSON abaixo (as definições completas também estão na aba "Data & Indexes" do app rodando):
 
-- **Índice 1 (criar com o nome `default`):** busca principal com sinônimos no campo `menu` e multi-analyzer em `name` (português + standard)
+- **Índice 1 (criar com o nome `default`):** busca principal com sinônimos no campo `menu`, multi-analyzer em `name` (português + standard) e `sponsored_boost` como `number` (necessário para o function score)
 - **Índice 2 (criar com o nome `autocomplete`):** sugestões em tempo real (edgeGram) nos campos `name`, `cuisine`, `borough`
 - **Índice 3 (criar com o nome `facets`):** contagens para os filtros laterais (stringFacet em cuisine/borough, numberFacet em stars/price_range)
 
-> ⚠️ Os nomes dos índices precisam ser **exatamente** `default`, `autocomplete` e `facets` — o backend faz referência a eles por nome.
+> ⚠️ Os nomes dos índices precisam ser **exatamente** `default`, `autocomplete` e `facets`, pois o backend faz referência a eles por nome.
 
 ### 5. Backend
 
@@ -125,7 +128,18 @@ npm run dev
 
 O backend sobe em `http://localhost:5000`.
 
-### 6. Frontend
+### 6. Marque os restaurantes patrocinados
+
+Para a feature de **Function Score** (toggle "Sponsored" na interface) funcionar, rode uma única vez:
+
+```bash
+cd whatscooking-backend
+node scripts/marcar_patrocinados.js
+```
+
+O script grava `sponsored: true` e `sponsored_boost: 5` em 15 restaurantes. É idempotente (pode rodar de novo sem efeitos colaterais) e determinístico: qualquer pessoa que clonar o repo marca os mesmos restaurantes. Requer o `.env` configurado no passo anterior.
+
+### 7. Frontend
 
 Em outro terminal:
 

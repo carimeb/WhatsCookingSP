@@ -235,7 +235,7 @@ export default function Header({ onSearch, onReset, activeTab, setActiveTab, hea
         }}>
           <div onClick={e => e.stopPropagation()} style={{
             background: '#1e2d3d', borderRadius: 12, padding: 28,
-            maxWidth: 500, width: '90%',
+            maxWidth: 500, width: '90%', maxHeight: '80vh', overflow: 'auto',
             fontFamily: "'Source Code Pro', monospace", fontSize: 14,
             color: '#C3E88D', lineHeight: 1.7,
             boxShadow: '0 20px 60px rgba(0,0,0,0.5)', position: 'relative',

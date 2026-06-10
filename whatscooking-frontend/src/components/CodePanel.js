@@ -69,12 +69,8 @@ function ColorizedJson({ data }) {
 export default function CodePanel({ queryDisplay, autocompleteQuery }) {
   const [modal, setModal] = useState(null);
 
-  // Extract just the search operator part for display
-  const searchContent = queryDisplay?.$search
-    ? Object.fromEntries(
-        Object.entries(queryDisplay.$search).filter(([k]) => k !== 'index')
-      )
-    : null;
+  // Exibe o stage real recebido do backend, incluindo o index verdadeiro
+  const searchContent = queryDisplay?.$search ?? null;
 
   return (
     <div style={{
@@ -103,14 +99,6 @@ export default function CodePanel({ queryDisplay, autocompleteQuery }) {
       }}>
         {queryDisplay ? (
           <>
-            <div style={{ color: '#546E7A', fontStyle: 'italic', marginBottom: 4 }}>
-              {'// optional, defaults to "default"'}
-            </div>
-            <div style={{ marginBottom: 8 }}>
-              <span style={{ color: '#C3E88D' }}>index</span>
-              {': '}
-              <span style={{ color: '#F78C6C' }}>{'< indexName >'}</span>
-            </div>
             <pre style={{
               whiteSpace: 'pre-wrap', wordBreak: 'break-word',
               fontFamily: "'Source Code Pro', monospace",
