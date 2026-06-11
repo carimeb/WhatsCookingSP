@@ -128,8 +128,130 @@ mongoimport \
 No Atlas UI → Search Indexes → na coleção `restaurants`, crie **3 índices** com os nomes e definições JSON abaixo (as definições completas também estão na aba "Data & Indexes" do app rodando):
 
 - **Índice 1 (criar com o nome `default`):** busca principal com sinônimos no campo `menu`, multi-analyzer em `name` (português + standard) e `sponsored_boost` como `number` (necessário para o function score)
+
+```bash
+{
+  "mappings": {
+    "dynamic": false,
+    "fields": {
+      "name": {
+        "type": "string",
+        "analyzer": "lucene.portuguese",
+        "multi": {
+          "standard": {
+            "type": "string",
+            "analyzer": "lucene.standard"
+          }
+        }
+      },
+      "cuisine": [
+        { "type": "string",
+          "analyzer": "lucene.portuguese" },
+        { "type": "token" }
+      ],
+      "borough": [
+        { "type": "string",
+          "analyzer": "lucene.portuguese" },
+        { "type": "token" }
+      ],
+      "description": { "type": "string",
+        "analyzer": "lucene.portuguese" },
+      "menu": { "type": "string",
+        "analyzer": "lucene.standard" },
+      "stars": { "type": "number" },
+      "reviews": { "type": "number" },
+      "price_range": { "type": "number" },
+      "open_now": { "type": "boolean" },
+      "location": { "type": "geo" },
+      "sponsored_boost": { "type": "number" }
+    }
+  },
+  "synonyms": [{
+    "analyzer": "lucene.standard",
+    "name": "MenuSynonyms",
+    "source": {
+      "collection": "menu_synonyms"
+    }
+  }]
+}
+```
+ 
 - **Índice 2 (criar com o nome `autocomplete`):** sugestões em tempo real (edgeGram) nos campos `name`, `cuisine`, `borough`
+
+```bash
+{
+  "mappings": {
+    "dynamic": false,
+    "fields": {
+      "name": [{
+        "type": "autocomplete",
+        "tokenization": "edgeGram",
+        "minGrams": 2,
+        "maxGrams": 10,
+        "foldDiacritics": true
+      }],
+      "cuisine": [{
+        "type": "autocomplete",
+        "tokenization": "edgeGram",
+        "minGrams": 2,
+        "maxGrams": 10,
+        "foldDiacritics": true
+      }],
+      "borough": [{
+        "type": "autocomplete",
+        "tokenization": "edgeGram",
+        "minGrams": 2,
+        "maxGrams": 10,
+        "foldDiacritics": true
+      }]
+    }
+  }
+}
+```
+
 - **Índice 3 (criar com o nome `facets`):** contagens para os filtros laterais (`token` em cuisine/borough, `number` em stars/price_range), com os mesmos mapeamentos de `name` e sinônimos do índice `default` para as contagens baterem com os resultados
+
+```bash
+{
+  "mappings": {
+    "dynamic": false,
+    "fields": {
+      "name": {
+        "type": "string",
+        "analyzer": "lucene.portuguese",
+        "multi": {
+          "standard": {
+            "type": "string",
+            "analyzer": "lucene.standard"
+          }
+        }
+      },
+      "cuisine": [
+        { "type": "token" },
+        { "type": "string",
+          "analyzer": "lucene.portuguese" }
+      ],
+      "borough": [
+        { "type": "token" },
+        { "type": "string",
+          "analyzer": "lucene.portuguese" }
+      ],
+      "stars": { "type": "number" },
+      "price_range": { "type": "number" },
+      "location": { "type": "geo" },
+      "menu": { "type": "string",
+        "analyzer": "lucene.standard" }
+    }
+  },
+  "synonyms": [{
+    "analyzer": "lucene.standard",
+    "name": "MenuSynonyms",
+    "source": {
+      "collection": "menu_synonyms"
+    }
+  }]
+}
+```
 
 > ⚠️ Os nomes dos índices precisam ser **exatamente** `default`, `autocomplete` e `facets`, pois o backend faz referência a eles por nome.
 
