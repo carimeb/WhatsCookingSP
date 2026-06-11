@@ -2,7 +2,7 @@
 
 Demo de busca de restaurantes em São Paulo usando **MongoDB Atlas Search** como engine de full-text search: uma alternativa moderna ao Elastic, totalmente integrada ao MongoDB.
 
-Inspirada na [demo original do time de devrel d MongoDB](https://github.com/mongodb-developer/WhatsCooking), reconstruída com dados reais de São Paulo e uma stack atualizada.
+Inspirada na [demo original do time de devrel da MongoDB](https://github.com/mongodb-developer/WhatsCooking), reconstruída com dados reais de São Paulo e uma stack atualizada.
 
 ---
 
