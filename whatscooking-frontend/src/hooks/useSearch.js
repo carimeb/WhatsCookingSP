@@ -21,10 +21,18 @@ export default function useSearch() {
   const [loading, setLoading] = useState(false);
   const [queryDisplay, setQueryDisplay] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [error, setError] = useState(null);
   const abortRef = useRef(null);
 
   const doSearch = useCallback(async (f, pg = 1) => {
+    // Cancela a busca anterior em andamento: sem isso, uma resposta lenta
+    // pode chegar DEPOIS de uma mais nova e sobrescrever o resultado correto
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
+    setError(null);
     try {
       const params = {
         q: f.q || '',
@@ -43,7 +51,7 @@ export default function useSearch() {
       };
 
       const [searchData, facetsData] = await Promise.all([
-        searchRestaurants(params),
+        searchRestaurants(params, controller.signal),
         getFacets({
           q: f.q || '',
           food: f.food || '',
@@ -52,7 +60,7 @@ export default function useSearch() {
           distance: f.distance || '',
           min_stars: f.min_stars || '',
           geo_mode: f.geo_mode,
-        }),
+        }, controller.signal),
       ]);
 
       setResults(searchData.results || []);
@@ -63,7 +71,15 @@ export default function useSearch() {
       setFacets(facetsData);
       setHasSearched(true);
     } catch (e) {
+      // Abort não é erro: significa que uma busca mais nova assumiu.
+      // A nova busca cuida do loading, então saímos sem mexer em nada.
+      if (e.name === 'AbortError') return;
       console.error('search error', e);
+      setError(
+        'Não foi possível conectar ao backend. Verifique se ele está rodando ' +
+        '(porta 5000) e se o cluster Atlas está ativo. Clusters pausam após ' +
+        'períodos de inatividade e precisam ser retomados no Atlas UI.'
+      );
     }
     setLoading(false);
   }, []);
@@ -80,6 +96,7 @@ export default function useSearch() {
     setTotal(0);
     setQueryDisplay(null);
     setHasSearched(false);
+    setError(null);
     // Keep facets visible but reload them without filters
     getFacets({}).then(setFacets).catch(() => {});
   }, []);
@@ -87,7 +104,7 @@ export default function useSearch() {
   return {
     filters, setFilters,
     results, facets, total, page, pages,
-    loading, queryDisplay, hasSearched,
+    loading, queryDisplay, hasSearched, error,
     search, reset,
     doSearch,
   };

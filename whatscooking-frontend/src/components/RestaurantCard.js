@@ -4,7 +4,7 @@ const CUISINE_EMOJI = {
   'Brasileira':'🇧🇷','Italiana':'🍝','Japonesa':'🍣','Árabe':'🧆',
   'Americana':'🍔','Mexicana':'🌮','Francesa':'🥐','Peruana':'🐟',
   'Vegana':'🥗','Frutos do Mar':'🦞','Churrasco':'🥩','Pizza':'🍕',
-  'Contemporânea':'👨‍🍳','Padaria':'🥖','Café':'☕',
+  'Contemporânea':'👨‍🍳','Padaria':'🥖','Café':'☕','Asiática':'🥡',
 };
 
 const PRICE = {1:'$',2:'$$',3:'$$$',4:'$$$$'};

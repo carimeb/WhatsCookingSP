@@ -149,6 +149,10 @@ O operador de function score com `path` lê o valor numérico diretamente do ín
 
 Sem esse mapeamento, o boost falha silenciosamente: a query executa, mas todos os documentos caem no fallback `undefined: 1` e nada muda no ranking.
 
+### Índices Atlas Search pertencem à coleção
+
+Dropar a coleção (por exemplo, via `mongoimport --drop`) apaga também todos os índices Atlas Search associados a ela, que precisam ser recriados manualmente. Por isso o README recomenda, para reimportações, o padrão `deleteMany({})` + import sem `--drop`: os documentos são substituídos e os índices sobrevivem, reconstruindo-se sozinhos em segundos. Toda reimportação também exige rodar `marcar_patrocinados.js` de novo, já que os campos de patrocínio vivem nos documentos apagados.
+
 ### Por que o índice `facets` espelha os mapeamentos do `default`?
 
 O backend usa as mesmas cláusulas de busca (`buildNameClause`, `buildFoodClause`) tanto em `/api/restaurants` (índice `default`) quanto em `/api/facets` (índice `facets`). Cláusulas idênticas executadas contra mapeamentos diferentes produzem matches diferentes: numa versão anterior, o índice `facets` não tinha o multi-field `name.standard`, e buscas fuzzy como "pizaria" retornavam 73 resultados com contagem de 71 nos facets (os 2 documentos que só casavam via `name.standard` escapavam da contagem).

@@ -43,7 +43,7 @@ export default function App() {
   const {
     filters, setFilters,
     results, facets, total, page, pages,
-    loading, queryDisplay, hasSearched,
+    loading, queryDisplay, hasSearched, error,
     search, reset, doSearch,
   } = useSearch();
 
@@ -157,6 +157,19 @@ export default function App() {
                 Sponsored
               </label>
             </div>
+
+            {/* Error banner */}
+            {error && (
+              <div style={{
+                margin: 8, padding: '12px 14px',
+                background: '#FFF3F3', border: '1px solid #FFC2C2',
+                borderRadius: 8, fontSize: 13, lineHeight: 1.6,
+                color: '#8B1A1A', flexShrink: 0,
+              }}>
+                <strong>⚠️ Erro na busca</strong>
+                <div style={{ marginTop: 4 }}>{error}</div>
+              </div>
+            )}
 
             {/* Results */}
             <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: 8 }}>

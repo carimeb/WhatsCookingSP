@@ -107,6 +107,22 @@ mongoimport \
   --jsonArray --drop
 ```
 
+> ⚠️ **Atenção ao formato da URI:** o nome do banco (`/whatscooking`) vai no caminho, **antes** do `?` de eventuais parâmetros. Se a URI terminar em `/?appName=...`, os dados vão parar no banco `test`.
+
+> ⚠️ **Reimportando depois dos índices criados?** O `--drop` derruba a coleção inteira, e os índices Atlas Search morrem junto com ela. Para reimportar preservando os índices, limpe apenas os documentos:
+>
+> ```bash
+> mongosh "mongodb+srv://<user>:<senha>@<cluster>.mongodb.net/whatscooking" \
+>   --eval "db.restaurants.deleteMany({})"
+> mongoimport \
+>   --uri "mongodb+srv://<user>:<senha>@<cluster>.mongodb.net/whatscooking" \
+>   --collection restaurants \
+>   --file data/restaurants_sp_enriched.json \
+>   --jsonArray
+> ```
+>
+> Em qualquer reimportação da coleção `restaurants`, rode o passo 6 (`marcar_patrocinados.js`) novamente, pois as marcações de patrocínio são apagadas junto com os documentos.
+
 ### 4. Crie os índices de busca no Atlas
 
 No Atlas UI → Search Indexes → na coleção `restaurants`, crie **3 índices** com os nomes e definições JSON abaixo (as definições completas também estão na aba "Data & Indexes" do app rodando):
@@ -185,7 +201,7 @@ Abre automaticamente em `http://localhost:3000`.
 - **~1490 restaurantes reais** de São Paulo coletados via OpenStreetMap (Overpass API)
 - Dados reais: nome, endereço, coordenadas, tipo de culinária
 - Dados enriquecidos (mockados): menu por culinária, stars, reviews, price_range
-- **15 culinárias**: Brasileira, Italiana, Japonesa, Pizza, Americana, Churrasco, Árabe, Francesa, Vegana, Contemporânea, Frutos do Mar, Mexicana, Padaria, Café, Peruana
+- **16 culinárias**: Brasileira, Italiana, Japonesa, Asiática, Pizza, Americana, Churrasco, Árabe, Francesa, Vegana, Contemporânea, Frutos do Mar, Mexicana, Padaria, Café, Peruana
 - **30 bairros** de SP
 
 ---

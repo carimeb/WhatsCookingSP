@@ -61,15 +61,18 @@ CUISINE_MAP = {
     "contemporary":     "Contemporânea",
     "fusion":           "Contemporânea",
     "international":    "Contemporânea",
-    "chinese":          "Japonesa",  # agrupa em asiática
-    "korean":           "Japonesa",
-    "thai":             "Japonesa",
+    "chinese":          "Asiática",
+    "korean":           "Asiática",
+    "thai":             "Asiática",
+    "vietnamese":       "Asiática",
+    "asian":            "Asiática",
 }
 
 DEFAULT_CUISINES = [
     "Brasileira", "Italiana", "Japonesa", "Pizza", "Americana",
     "Churrasco", "Árabe", "Francesa", "Vegana", "Contemporânea",
     "Frutos do Mar", "Mexicana", "Padaria", "Café", "Peruana",
+    "Asiática",
 ]
 
 # ── Bairros de SP com coordenadas (fallback quando OSM não tem bairro) ─────────
@@ -131,6 +134,7 @@ MENUS = {
     "Pizza": ["Pizza margherita","Pizza calabresa","Pizza quatro queijos","Pizza portuguesa","Pizza frango com catupiry","Pizza pepperoni","Pizza napolitana","Pizza de rúcula com parma","Pizza de cogumelos","Pizza de camarão","Pizza de brigadeiro","Calzone","Pão de alho recheado","Focaccia de alecrim"],
     "Contemporânea": ["Tartar de atum com abacate","Vieira com purê de couve-flor","Risotto de trufas","Pato com molho de laranja","Polvo com batata-doce","Ravioli de lagosta","Sorvete de azeite com sal grosso","Cheesecake desconstruído","Filé mignon com foie gras","Burrata com tomate heirloom","Carne wagyu grelhada","Espuma de maracujá","Menu degustação"],
     "Padaria": ["Croissant de manteiga","Pão de fermentação natural","Baguette","Pão integral artesanal","Focaccia de alecrim","Ciabatta","Pão de queijo mineiro","Sonho de creme","Bomba de chocolate","Coxinha de frango","Pastel de nata","Torta de frango","Bolo de cenoura com brigadeiro","Tapioca"],
+    "Asiática": ["Frango xadrez","Rolinho primavera","Arroz chop suey","Frango agridoce","Pad thai","Curry verde tailandês","Pho","Banh mi","Bibimbap","Bulgogi","Dim sum","Dumpling de porco","Lámen apimentado","Frango ao curry","Bao de costela"],
     "Café": ["Espresso","Cappuccino","Flat white","Latte macchiato","Cold brew","Affogato","Café coado especial","Chemex","V60","Matcha latte","Chocolate quente belga","Croissant de amêndoas","Bolo de limão","Avocado toast","Granola com iogurte"],
 }
 
