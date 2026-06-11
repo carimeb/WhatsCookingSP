@@ -110,13 +110,49 @@ def guess_borough(lat, lng):
             best = name
     return best
 
-def map_cuisine(osm_cuisine):
-    if not osm_cuisine:
-        return random.choice(DEFAULT_CUISINES)
-    for key, value in CUISINE_MAP.items():
-        if key in osm_cuisine.lower():
-            return value
-    return random.choice(DEFAULT_CUISINES)
+# Pistas no nome do restaurante, em ordem de prioridade.
+# Palavras sem acento: a comparação normaliza o nome antes (NFD).
+NAME_HINTS = [
+    (("pizzaria", "pizza", "pizze"), "Pizza"),
+    (("sushi", "temaki", "sashimi", "japones", "izakaya", "yakisoba", "temakeria"), "Japonesa"),
+    (("hamburgueria", "burger", "burguer", "lanches", "lanchonete", "hot dog", "dogueria"), "Americana"),
+    (("churrascaria", "churrasco", "espeto", "grill", "grelhados"), "Churrasco"),
+    (("padaria", "panificadora", "paes", "confeitaria"), "Padaria"),
+    (("cafeteria", "coffee", " cafe", "cafe "), "Café"),
+    (("cantina", "trattoria", "osteria", "massas", "pasta", "italiana"), "Italiana"),
+    (("esfiha", "esfirra", "arabe", "kebab", "shawarma", "sirio", "libanes"), "Árabe"),
+    (("taco", "burrito", "mexican", "mexicano"), "Mexicana"),
+    (("vegan", "vegetarian", "natural"), "Vegana"),
+    (("frutos do mar", "peixaria", "marisco", "pescados", "siri", "camarao"), "Frutos do Mar"),
+    (("bistro", "creperia", "boulangerie"), "Francesa"),
+    (("ceviche", "peruan"), "Peruana"),
+    (("chines", "china ", " china", "wok", "asiatic", "coreano", "tailandes"), "Asiática"),
+    (("feijoada", "mineira", "mineiro", "nordestin", "caseira", "caseiro", "boteco", "botequim"), "Brasileira"),
+]
+
+def _normalize(text):
+    """minúsculas + sem acentos, para comparar com as pistas."""
+    import unicodedata
+    nfd = unicodedata.normalize("NFD", text.lower())
+    return "".join(c for c in nfd if unicodedata.category(c) != "Mn")
+
+def infer_cuisine_from_name(name):
+    n = _normalize(name)
+    for keywords, cuisine in NAME_HINTS:
+        if any(k in n for k in keywords):
+            return cuisine
+    return None
+
+def map_cuisine(osm_cuisine, name=""):
+    """Prioridade: tag OSM (dado real) > pista no nome > aleatório."""
+    if osm_cuisine:
+        for key, value in CUISINE_MAP.items():
+            if key in osm_cuisine.lower():
+                return value, "tag"
+    hint = infer_cuisine_from_name(name)
+    if hint:
+        return hint, "nome"
+    return random.choice(DEFAULT_CUISINES), "aleatoria"
 
 # ── Menus por culinária ───────────────────────────────────────────────────────
 MENUS = {
@@ -176,6 +212,7 @@ except Exception as e:
 # ── Process elements ──────────────────────────────────────────────────────────
 restaurants = []
 seen_names = set()
+origem_count = {}
 
 for el in elements:
     tags = el.get("tags", {})
@@ -206,7 +243,8 @@ for el in elements:
     )
 
     # Cuisine
-    cuisine = map_cuisine(tags.get("cuisine", ""))
+    cuisine, cuisine_origem = map_cuisine(tags.get("cuisine", ""), name)
+    origem_count[cuisine_origem] = origem_count.get(cuisine_origem, 0) + 1
 
     # Phone / website
     phone = tags.get("phone") or tags.get("contact:phone") or f"+55 11 {random.randint(3000,9999)}-{random.randint(1000,9999)}"
@@ -254,6 +292,11 @@ from collections import Counter
 print("\nPor culinária:")
 for cuisine, count in sorted(Counter(r["cuisine"] for r in restaurants).items(), key=lambda x: -x[1]):
     print(f"  {cuisine}: {count}")
+
+print("\nOrigem da culinária:")
+print(f"  tag OSM (dado real): {origem_count.get('tag', 0)}")
+print(f"  inferida do nome:    {origem_count.get('nome', 0)}")
+print(f"  aleatória:           {origem_count.get('aleatoria', 0)}")
 
 print(f"\nTotal final: {len(restaurants)} restaurantes")
 print("\nPróximo passo: rode o mongoimport com esse arquivo!")

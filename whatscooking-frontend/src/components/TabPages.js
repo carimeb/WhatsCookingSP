@@ -139,7 +139,7 @@ export function DataIndexesPage() {
 
       <div style={{ marginBottom: 32 }}>
         <div style={{ fontWeight: 700, marginBottom: 8, color: 'var(--text-muted)', fontSize: 13 }}>
-          Documento de exemplo — whatscooking.restaurants
+          Documento de exemplo: whatscooking.restaurants
         </div>
         <pre style={{
           background: '#1C2D3F', color: '#C3E88D', borderRadius: 8,
@@ -243,7 +243,15 @@ export function DataIndexesPage() {
         "type": "autocomplete",
         "tokenization": "edgeGram",
         "minGrams": 2,
-        "maxGrams": 10
+        "maxGrams": 10,
+        "foldDiacritics": true
+      }],
+      "borough": [{
+        "type": "autocomplete",
+        "tokenization": "edgeGram",
+        "minGrams": 2,
+        "maxGrams": 10,
+        "foldDiacritics": true
       }]
     }
   }
@@ -331,7 +339,7 @@ export function FunctionScorePage() {
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 32px' }}>
       <h2 style={{ fontSize: 28, marginBottom: 8, textAlign: 'center' }}>Function Score</h2>
       <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginBottom: 40, fontSize: 16, maxWidth: 640, margin: '0 auto 40px' }}>
-        Relevância é o padrão — mas nem sempre é o suficiente. Com <strong>Function Score</strong>, o
+        Relevância é o padrão, mas nem sempre é o suficiente. Com <strong>Function Score</strong>, o
         Atlas Search permite modificar matematicamente o ranking dos resultados, combinando o score
         de relevância com campos do próprio documento.
       </p>
@@ -347,22 +355,22 @@ export function FunctionScorePage() {
           </p>
           <ul style={{ paddingLeft: 20, margin: 0, color: 'var(--text-muted)' }}>
             <li style={{ marginBottom: 8 }}>
-              <strong style={{ color: 'inherit' }}>Frequência do termo (TF)</strong> — quantas vezes o termo buscado aparece no
+              <strong style={{ color: 'inherit' }}>Frequência do termo (TF)</strong>: quantas vezes o termo buscado aparece no
               campo. Um restaurante com "pizza" em 5 itens do menu pontua mais que um com 1.
             </li>
             <li style={{ marginBottom: 8 }}>
-              <strong style={{ color: 'inherit' }}>Raridade do termo (IDF)</strong> — termos raros na coleção valem mais.
+              <strong style={{ color: 'inherit' }}>Raridade do termo (IDF)</strong>: termos raros na coleção valem mais.
               "Trufado" diferencia mais que "molho", que aparece em quase todo menu.
             </li>
             <li>
-              <strong style={{ color: 'inherit' }}>Tamanho do campo</strong> — um match em um campo curto (nome) pesa mais
+              <strong style={{ color: 'inherit' }}>Tamanho do campo</strong>: um match em um campo curto (nome) pesa mais
               que o mesmo match em um campo longo (descrição extensa).
             </li>
           </ul>
           <p style={{ marginTop: 12, marginBottom: 0 }}>
             O score aparece no canto de cada card de resultado e é retornado pelo pipeline via{' '}
             <code>{'{ $meta: "searchScore" }'}</code>. Repare: o valor é <em>relativo à busca</em>,
-            não uma nota absoluta — só faz sentido comparar scores dentro do mesmo conjunto de resultados.
+            não uma nota absoluta: só faz sentido comparar scores dentro do mesmo conjunto de resultados.
           </p>
         </div>
       </div>
@@ -376,14 +384,14 @@ export function FunctionScorePage() {
             aritmética</strong> que você define. Os blocos de construção:
           </p>
           <ul style={{ paddingLeft: 20, margin: '0 0 12px', color: 'var(--text-muted)' }}>
-            <li style={{ marginBottom: 6 }}><code>score: "relevance"</code> — o score BM25 original</li>
-            <li style={{ marginBottom: 6 }}><code>path</code> — o valor numérico de um campo do documento (precisa estar indexado como <code>number</code>)</li>
-            <li style={{ marginBottom: 6 }}><code>constant</code> — um número fixo</li>
-            <li><code>multiply</code>, <code>add</code>, <code>log</code>, <code>gauss</code> — operações para combinar os blocos acima</li>
+            <li style={{ marginBottom: 6 }}><code>score: "relevance"</code>: o score BM25 original</li>
+            <li style={{ marginBottom: 6 }}><code>path</code>: o valor numérico de um campo do documento (precisa estar indexado como <code>number</code>)</li>
+            <li style={{ marginBottom: 6 }}><code>constant</code>: um número fixo</li>
+            <li><code>multiply</code>, <code>add</code>, <code>log</code>, <code>gauss</code>: operações para combinar os blocos acima</li>
           </ul>
           <p style={{ margin: 0 }}>
             Isso transforma ranking em <strong>regra de negócio</strong>: resultados patrocinados,
-            boost por avaliação, decaimento por distância ou idade — tudo declarado na própria query,
+            boost por avaliação, decaimento por distância ou idade, tudo declarado na própria query,
             sem pós-processamento na aplicação.
           </p>
         </div>
@@ -438,12 +446,12 @@ export function FunctionScorePage() {
           <p style={{ marginBottom: 12 }}>
             O boost multiplicativo <strong>preserva a relevância</strong>: um patrocinado sobe na
             proporção do quanto ele já era relevante para a busca. Um restaurante patrocinado que
-            mal menciona "pizza" não atropela uma pizzaria orgânica extremamente relevante —
+            mal menciona "pizza" não atropela uma pizzaria orgânica extremamente relevante:
             5 × (score baixo) ainda pode perder de 1 × (score altíssimo).
           </p>
           <p style={{ margin: 0 }}>
             Esse é um argumento de negócio importante: <em>patrocínio influencia, mas não corrompe,
-            a qualidade dos resultados</em> — a experiência do usuário final continua protegida.
+            a qualidade dos resultados</em>, e a experiência do usuário final continua protegida.
             Quer um boost mais agressivo? Basta aumentar o valor de <code>sponsored_boost</code>{' '}
             nos documentos, sem tocar na query.
           </p>
@@ -464,10 +472,10 @@ export function FunctionScorePage() {
             </li>
             <li style={{ marginBottom: 8 }}>
               Abra o <strong>painel de código</strong> e mostre a query: a única diferença é o bloco{' '}
-              <code>score.function</code> — uma linha de negócio, zero mudança na aplicação.
+              <code>score.function</code>: uma linha de negócio, zero mudança na aplicação.
             </li>
             <li>
-              Mostre que um orgânico muito relevante ainda pode segurar posição — relevância
+              Mostre que um orgânico muito relevante ainda pode segurar posição: relevância
               continua valendo.
             </li>
           </ol>
@@ -481,7 +489,7 @@ export function FunctionScorePage() {
           <div style={FS_CARD}>
             <strong>⭐ Boost por avaliação</strong>
             <p style={{ margin: '8px 0 0', color: 'var(--text-muted)' }}>
-              <code>multiply: [score, path: "stars"]</code> — restaurantes mais bem avaliados
+              <code>multiply: [score, path: "stars"]</code>: restaurantes mais bem avaliados
               sobem naturalmente no ranking.
             </p>
           </div>
@@ -489,14 +497,14 @@ export function FunctionScorePage() {
             <strong>🔥 Boost por popularidade</strong>
             <p style={{ margin: '8px 0 0', color: 'var(--text-muted)' }}>
               <code>log</code> sobre <code>reviews</code> evita que um restaurante com 10.000
-              avaliações esmague todos os outros — crescimento amortecido.
+              avaliações esmague todos os outros (crescimento amortecido).
             </p>
           </div>
           <div style={FS_CARD}>
             <strong>📍 Decaimento por distância</strong>
             <p style={{ margin: '8px 0 0', color: 'var(--text-muted)' }}>
               <code>gauss</code> reduz o score suavemente conforme o restaurante se afasta de um
-              ponto de origem — sem cortes bruscos como um filtro geo.
+              ponto de origem, sem cortes bruscos como um filtro geo.
             </p>
           </div>
         </div>

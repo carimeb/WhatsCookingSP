@@ -8,7 +8,7 @@ Ideal para reproduzir o projeto do zero usando desenvolvimento guiado por especi
 
 ## 🎯 Contexto e objetivo
 
-A demo foi construída para apresentar o **MongoDB Atlas Search** a clientes que utilizam Elasticsearch e estão insatisfeitos com performance e custo. O objetivo é mostrar, de forma visual e interativa, que todos os operadores de busca que o cliente já usa no Elastic têm equivalente no Atlas Search, em muitos casos com configuração mais simples.
+A demo foi construída para apresentar o **MongoDB Atlas Search** a desenvolvedores, em especial aos que já conhecem Elasticsearch. O objetivo é mostrar, de forma visual e interativa, que os operadores de busca usuais do Elastic têm equivalente no Atlas Search, em muitos casos com configuração mais simples.
 
 ---
 
@@ -153,6 +153,12 @@ Sem esse mapeamento, o boost falha silenciosamente: a query executa, mas todos o
 
 Dropar a coleção (por exemplo, via `mongoimport --drop`) apaga também todos os índices Atlas Search associados a ela, que precisam ser recriados manualmente. Por isso o README recomenda, para reimportações, o padrão `deleteMany({})` + import sem `--drop`: os documentos são substituídos e os índices sobrevivem, reconstruindo-se sozinhos em segundos. Toda reimportação também exige rodar `marcar_patrocinados.js` de novo, já que os campos de patrocínio vivem nos documentos apagados.
 
+### Definição de índice só é confiável depois de testada
+
+Uma recriação acidental dos índices (após um `--drop`) revelou que a definição do índice `autocomplete` documentada na aba "Data & Indexes" estava incompleta: faltava o campo `borough`, que o backend consulta desde o início. O índice original no Atlas tinha o campo, a documentação não, e a divergência ficou invisível até o dia em que alguém precisou reconstruir o índice a partir dela. A query então passou a falhar com `autocomplete index field definition not present at path borough`.
+
+A lição, no espírito de reprodutibilidade deste projeto: **uma definição de índice documentada só é confiável depois que alguém recriou o índice a partir dela e rodou a aplicação contra o resultado**. Ao alterar um índice no Atlas, atualize a definição na aba e, idealmente, valide o caminho inverso. As definições exibidas no app foram corrigidas e testadas por recriação completa.
+
 ### Por que o índice `facets` espelha os mapeamentos do `default`?
 
 O backend usa as mesmas cláusulas de busca (`buildNameClause`, `buildFoodClause`) tanto em `/api/restaurants` (índice `default`) quanto em `/api/facets` (índice `facets`). Cláusulas idênticas executadas contra mapeamentos diferentes produzem matches diferentes: numa versão anterior, o índice `facets` não tinha o multi-field `name.standard`, e buscas fuzzy como "pizaria" retornavam 73 resultados com contagem de 71 nos facets (os 2 documentos que só casavam via `name.standard` escapavam da contagem).
@@ -161,7 +167,7 @@ A regra geral: **índices que compartilham cláusulas precisam compartilhar mape
 
 ### Nota sobre a depreciação de `stringFacet` e `numberFacet`
 
-O Atlas deprecou os tipos dedicados de facet. Os tipos normais absorveram a função: `token` agora serve para facetar, ordenar e fazer match exato (`equals`, `in`, `range`), e `number` serve para facetar e para `range`. A sintaxe da query no `$searchMeta` não muda (o facet continua declarando `type: 'string'` ou `type: 'number'`); apenas o tipo do campo na definição do índice. As definições completas dos 3 índices estão na aba "Data & Indexes" do app.
+O Atlas deprecou os tipos dedicados de facet. Os tipos normais absorveram a função: `token` agora serve para facetar, ordenar e fazer match exato (`equals`, `in`, `range`), e `number` serve para facetar e para `range`. A sintaxe da query no `$searchMeta` não muda (o facet continua declarando `type: 'string'` ou `type: 'number'`); apenas o tipo do campo na definição do índice.
 
 ### Por que `fuzzy` e `synonyms` não podem coexistir?
 
